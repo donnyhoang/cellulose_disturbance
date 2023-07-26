@@ -1,4 +1,3 @@
 # cellulose_disturbance
-Disturbance experiment of Lewin et al's cellulose enriched community
 
-testtesttest
+R scripts for analysis+visulization of disturbance experiment of Lewin et al's cellulose enriched community
