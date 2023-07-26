@@ -8,4 +8,6 @@ Phyloseq objects were written out into data tables so I could graph myself.
 
 Most visualization done with "disturbance_total_*_no2CDay5" files.
 
+Some files are named with "otu" but should be "asv"
+
 "pseudomonas_alignment.txt" was a quick alignment to verify same two Pseudomonas ASVs between the two Illumina runs.
