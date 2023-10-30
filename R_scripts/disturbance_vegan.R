@@ -7,6 +7,8 @@ library(RColorBrewer)
 library(hillR)
 library(ggpubr)
 library(ggpmisc)
+library(stringr)
+library(cowplot)
 library(ggtext)
 #references
 #https://rpubs.com/an-bui/vegan-cheat-sheet
@@ -52,48 +54,100 @@ hill_total <- merge(hill_total, h2, by = "Sample_Name")
 colnames(hill_total) <- c("Sample_Name", "Hill0","Hill1", "Hill2")
 
 hill_total <- merge(hill_total, metadata, by = "Sample_Name")
+
+#write.csv(hill_total, "diversity_metadata.csv", row.names = FALSE)
+
 hill_total$Frequency2 <- 1/hill_total$Frequency
+
+hill_summary <- hill_total %>%
+  group_by(Substrate, Frequency) %>%
+  summarise(meanHill1 = mean(Hill1),
+            sdHill1 = sd(Hill1),
+            meanHill2 = mean(Hill2),
+            sdHill2 = sd(Hill2),
+            meanHill0 = mean(Hill0),
+            sdHill0 = sd(Hill0))
+
+
+
+# do some t.tests to claim 1/3 is highest for cellulose and 1/1 is highest for glucose
+
+datacel <- subset(hill_total, Substrate == "Cellulose")
+dataglu <- subset(hill_total, Substrate == "Glucose")
+
+tab1<-compare_means(Hill1 ~ Frequency, data=datacel, ref.group="3", method="t.test")
+tab1$Substrate <- "Cellulose"
+tab2<-compare_means(Hill1 ~ Frequency, data=dataglu, ref.group="1", method="t.test")
+tab2$Substrate <- "Glucose"
+
+tab_total <- rbind(tab1,tab2)
+colnames(tab_total)[1] = "DiversityIndex"
+colnames(tab_total)[2] = "Reference"
+colnames(tab_total)[3] = "Comparison"
+colnames(tab_total)[4] = "p-value"
+
+#write.csv(tab_total, "disturbance_diversity_stats.csv", row.names = FALSE)
+
+tab_total2 <- tab_total %>%
+  mutate(across("Reference", str_replace, "1", "1/1"),
+         across("Reference", str_replace, "3", "1/3"),
+         across("Comparison", str_replace, "1", "1/1"),
+         across("Comparison", str_replace, "2", "1/2"),
+         across("Comparison", str_replace, "3", "1/3"),
+         across("Comparison", str_replace, "5", "1/5"),
+         across("Comparison", str_replace, "7", "1/7"))
+
+tab_total2 <- tab_total2[,c(9,8,2,3,6,7)]
+colnames(tab_total2) <- c("Substrate", "Method","Reference \n Frequency","Comparison \n Frequency","p-value","Significance")
 
 ###### Graph Hill numbers #######
 
-## Star with H1 cause that's probably the best to compare
-pHill1_lin <-ggplot(hill_total, aes(x = Frequency2, y = Hill1, color = Substrate)) +
-  geom_point() +
-  stat_poly_line(formula = y ~ x, linetype = "dotted", se = T) +
-  stat_poly_eq(use_label(c("eq", "R2","p")),
-               formula = y ~ x,
-               label.x = "right") +
+## Start with H1 
+
+
+hill_total$Frequency2 <- as.factor(hill_total$Frequency2)
+
+stats_data <- function(y) {
+  return(data.frame(
+    y=8,
+    label = paste('n=', length(y), '\n')
+  ))
+}
+
+pHill1 <-ggplot(hill_total, aes(x = Frequency2, y = Hill1, color = Substrate, fill = Substrate)) +
+  geom_boxplot() +
+  stat_summary(fun.data = stats_data,
+               geom = "text",
+               position = position_dodge(width = 0.8)) +
   theme_classic(base_size=15)+
-  #theme(aspect.ratio=1) +
+  theme(legend.position = "bottom") +
   scale_fill_manual(values=c("#e1f8df","#fff1f9")) + 
   scale_color_manual(values=c("#7fbf7b","#e9a3c9")) +
-  scale_x_continuous(breaks = c(0.14285714285,0.2,0.33333333333,0.5,1),
+  scale_x_discrete(#breaks = c(0.14285714285,0.2,0.33333333333,0.5,1),
                      labels = c("1/7","1/5","1/3","1/2","1/1")) +
-  labs(y="Hill Number q = 1 (number of common ASVs)", x="Disturbance Frequency (1/n days)") + 
-  ggtitle("DDR, with Linear Regression")
-pHill1_lin
+  labs(y="Number of Common ASVs", x="Disturbance Frequency (1/n days)") + 
+  ggtitle("Hill 1 Diversity \n Exponential of Shannon's Entropy")
+pHill1
 
 
-pHill1_poly <- ggplot(hill_total, aes(x = Frequency2, y = Hill1, color = Substrate)) +
-  geom_point() +
-  stat_poly_line(formula = y ~ poly(x,2), linetype = "dotted", se = T) +
-  stat_poly_eq(use_label(c("eq", "R2","p")),
-               formula = y ~ poly(x, 2),
-               label.x = "right") +
-  theme_classic(base_size=15)+
-  #theme(aspect.ratio=1) +
-  scale_fill_manual(values=c("#e1f8df","#fff1f9")) + 
-  scale_color_manual(values=c("#7fbf7b","#e9a3c9")) +
-  scale_x_continuous(breaks = c(0.14285714285,0.2,0.33333333333,0.5,1),
-                     labels = c("1/7","1/5","1/3","1/2","1/1")) +
-  labs(y="Hill Number q = 1 (number of common ASVs)", x="Disturbance Frequency (1/n days)") + 
-  ggtitle("DDR, with Quadratic Reggression")
-pHill1_poly
+p_stats <- ggtexttable(tab_total2, rows = NULL,
+                            theme = ttheme("light")) +
+  theme(plot.margin = unit(c(0,0,0,0), "cm"))
+p_stats <- tab_add_title(p_stats, "Student's T-test of Hill 1 Diversity", size = 15)
+p_stats
 
 
-ggarrange(pHill1_lin, pHill1_poly, common.legend = TRUE, legend = "right" )
 
-ggsave("Figure_4.tiff", device = "tiff", dpi = 700)
+p1 <- pHill1 
+p2 <- p_stats
+
+fig4 <- plot_grid(p1, p2, labels = "AUTO", label_size = 25, rel_widths = c(1.3,1), rel_heights = c(1,1))
+fig4
+
+
+ggsave("Figure_hill1.tiff", device = "tiff", dpi = 700)
+ggsave("Figure_hill1.png", device = "png", dpi = 700)
+ggsave("Figure_hill1.pdf", device = "pdf", dpi = 700)
 
 
 
@@ -116,13 +170,13 @@ pHill0 <-ggplot(hill_total, aes(x = Frequency2, y = Hill0, color = Substrate, fi
                geom = "text",
                position = position_dodge(width = 0.8)) +
   theme_classic(base_size=15)+
-  #theme(aspect.ratio=1) +
+  theme(legend.position = "bottom") +
   scale_fill_manual(values=c("#e1f8df","#fff1f9")) + 
   scale_color_manual(values=c("#7fbf7b","#e9a3c9")) +
   scale_x_discrete(#breaks = c(0.14285714285,0.2,0.33333333333,0.5,1),
     labels = c("1/7","1/5","1/3","1/2","1/1")) +
-  labs(y="Hill Number q = 0 (Number of ASVs)", x="Disturbance Frequency (1/n days)") + 
-  ggtitle("Richness-Disturbance Relationship")
+  labs(y="Number of ASVs", x="Disturbance Frequency (1/n days)") + 
+  ggtitle("Hill 0 Diversity \n Richness")
 pHill0
 
 stats_data2 <- function(y) {
@@ -139,19 +193,80 @@ pHill2 <-ggplot(hill_total, aes(x = Frequency2, y = Hill2, color = Substrate, fi
                geom = "text",
                position = position_dodge(width = 0.8)) +
   theme_classic(base_size=15)+
-  #theme(aspect.ratio=1) +
+  theme(legend.position = "bottom") +
   scale_fill_manual(values=c("#e1f8df","#fff1f9")) + 
   scale_color_manual(values=c("#7fbf7b","#e9a3c9")) +
   scale_x_discrete(#breaks = c(0.14285714285,0.2,0.33333333333,0.5,1),
     labels = c("1/7","1/5","1/3","1/2","1/1")) +
-  labs(y="Hill Number q = 2 (Inverse-Simpson Index)", x="Disturbance Frequency (1/n days)") + 
-  ggtitle("Inverse-Simpson-Disturbance Relationship")
+  labs(y="Diversity (Hill 2, Inverse-Simpson)", x="Disturbance Frequency (1/n days)") + 
+  ggtitle("Hill 2 Diversity \n Inverse-Simpson Index")
 pHill2
 
-ggarrange(pHill0, pHill2, common.legend = TRUE, legend = "right" )
+ggarrange(pHill0, pHill2, common.legend = TRUE, legend = "bottom", labels = "AUTO", font.label=list(size = 20))
 
-ggsave("Supplemental_Figure_2.tiff", device = "tiff", dpi = 700)
+ggsave("Hill0_Hill2.tiff", device = "tiff", dpi = 700)
+ggsave("Hill0_Hill2.png", device = "png", dpi = 700)
+ggsave("Hill0_Hill2.pdf", device = "pdf", dpi = 700)
 
+
+#lets do all three for fun
+
+hill_table <- hill_total[,c(1:6,8:10)]
+hill_table <- melt(hill_table, id =c("Sample_Name","Frequency","Substrate","Replicate","Time","Run"))
+
+
+phill <- ggplot(hill_table, aes(x = variable, y = value, color = Substrate)) +
+  geom_point() +
+  facet_grid(~Frequency)
+
+phill
+
+
+
+
+## regression
+## Star with H1 cause that's probably the best to compare
+hill_total$Frequency2 <- as.numeric(hill_total$Frequency2)
+pHill1_lin <-ggplot(hill_total, aes(x = Frequency2, y = Hill1, color = Substrate)) +
+  geom_point() +
+  stat_poly_line(formula = y ~ x, linetype = "dotted", se = T) +
+  stat_poly_eq(use_label(c("eq", "R2","p")),
+               formula = y ~ x,
+               label.x = "right") +
+  theme_classic(base_size=20)+
+  #theme(aspect.ratio=1) +
+  scale_fill_manual(values=c("#e1f8df","#fff1f9")) + 
+  scale_color_manual(values=c("#7fbf7b","#e9a3c9")) +
+  scale_x_continuous(breaks = c(0.14285714285,0.2,0.33333333333,0.5,1),
+                     labels = c("1/7","1/5","1/3","1/2","1/1")) +
+  labs(y="Number of common ASVs", x="Disturbance Frequency (1/n days)") + 
+  ggtitle("Hill 1 Diversity, with Linear Regression")
+pHill1_lin
+
+
+pHill1_poly <- ggplot(hill_total, aes(x = Frequency2, y = Hill1, color = Substrate)) +
+  geom_point() +
+  stat_poly_line(formula = y ~ poly(x,2), linetype = "dotted", se = T) +
+  stat_poly_eq(use_label(c("eq", "R2","p")),
+               formula = y ~ poly(x, 2),
+               label.x = "right") +
+  theme_classic(base_size=20)+
+  #theme(aspect.ratio=1) +
+  scale_fill_manual(values=c("#e1f8df","#fff1f9")) + 
+  scale_color_manual(values=c("#7fbf7b","#e9a3c9")) +
+  scale_x_continuous(breaks = c(0.14285714285,0.2,0.33333333333,0.5,1),
+                     labels = c("1/7","1/5","1/3","1/2","1/1")) +
+  labs(y="Number of common ASVs", x="Disturbance Frequency (1/n days)") + 
+  ggtitle("Hill 1 Diversity, with Quadratic Reggression")
+pHill1_poly
+
+
+ggarrange(pHill1_lin, pHill1_poly, common.legend = TRUE, legend = "bottom", labels = "AUTO", font.label=list(size = 20) )
+
+
+ggsave("regression.tiff", device = "tiff", dpi = 700)
+ggsave("regression.png", device = "png", dpi = 700)
+ggsave("regression.pdf", device = "pdf", dpi = 700)
 
 
 
@@ -217,6 +332,17 @@ head(data)
 colorCount <- 15
 getPalette = colorRampPalette(brewer.pal(12, "Set3"))
 
+data_summary <- data %>%
+  group_by(Substrate, Frequency, variable, Time) %>%
+  summarise(count=n(),
+            mean=mean(value),
+            median=medium(value),
+            min=min(value),
+            max=max(value))
+data_sum_g <- subset(data_summary, Substrate == "Glucose")
+data_sum_g5 <- subset(data_sum_g, Frequency == "5")
+data_sum_c <- subset(data_summary, Substrate == "Cellulose")
+data_sum_c2 <- subset(data_sum_c, Frequency == "2")
 
 datac <- subset(data, data$Substrate=="Cellulose")
 datag <- subset(data, data$Substrate=="Glucose")
@@ -269,8 +395,9 @@ pc <-ggplot(datac) +
 
 ggarrange(pc + rremove("xlab"), pg, common.legend = TRUE, ncol=1, nrow=2,legend = "bottom")
 
-ggsave("Figure_2.tiff", device = "tiff", dpi = 700)
-
+ggsave("abundance.tiff", device = "tiff", dpi = 700)
+ggsave("abundance.png", device = "png", dpi = 700)
+ggsave("abundance.pdf", device = "pdf", dpi = 700)
 
 
 ######### BAR GRAPH of just DISTURBANCE FREQUENCY 2 FOR SUPPLEMENTAL ############
@@ -319,8 +446,9 @@ p_f2 <-ggplot(data2) +
 p_f2
 
 
-ggsave("Supplemental_Figure_1.tiff", device = "tiff", dpi = 700)
-
+ggsave("freq2_abundance.tiff", device = "tiff", dpi = 700)
+ggsave("freq2_abundance.png", device = "png", dpi = 700)
+ggsave("freq2_abundance.pdf", device = "pdf", dpi = 700)
 
 ## Get summary table of ASVs for easy reference
 data2 <- data

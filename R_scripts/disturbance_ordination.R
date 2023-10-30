@@ -25,6 +25,7 @@ metadata$Substrate <- factor(metadata$Substrate, levels=c("Cellulose","Glucose")
 attach(metadata)
 
 #ordinate in 3 dimensions bc it cannot find solution with 2
+set.seed(2)
 ordination.model <- metaMDS(otu, distance='bray', k=3)
 
 #extract coordinates so I can plot with ggplot2
@@ -35,19 +36,8 @@ data <- cbind(metadata, nmds_coords)
 #write.csv(data, "disturbance_ordination_coords_no2CDay5.csv", row.names=FALSE)
 
 ####2d nmds plot#######
-plot <- ggplot() +
-  geom_point(data=data,
-             aes(x=MDS1, y=MDS2, color=Substrate, bg=Substrate, shape=Frequency),
-             size=4) +
-  theme_classic() +
-  xlab("NMDS1") +
-  ylab("NMDS2") +
-  coord_fixed(ratio=1) +
-  scale_color_manual(values=c("#7fbf7b","#e9a3c9")) +
-  scale_fill_manual(values=c("#7fbf7b","#e9a3c9")) +
-  scale_shape_manual(values=c(25,24,23,22,21))
-plot
 
+#Run 20 stress 0.03723448 ... Procrustes: rmse 0.0001984676  max resid 0.003191145 
 #color by freq. Coloring by Freq easier to read imo, keep this one
 plot2 <- ggplot() +
   geom_point(data=data,
@@ -56,7 +46,7 @@ plot2 <- ggplot() +
   theme_classic(base_size=15) +
   xlab("NMDS1") +
   ylab("NMDS2") +
-  #coord_fixed(ratio=1) +
+  annotate(geom="text", x = -1.2, y = 1.25, label = "Stress = 0.037", size = 6) +
   scale_color_manual(values=c("#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854")) +
   scale_fill_manual(values=c("#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854")) +
   scale_shape_manual(values=c(21,22)) +
@@ -66,6 +56,7 @@ plot2
 
 ######## stats ###########
 #https://chrischizinski.github.io/rstats/adonis/
+
 
 dist <- vegdist(otu) #create distance matrix
 attach(metadata) #attach metadata
@@ -95,25 +86,24 @@ adFrequency <- adonis2(dist ~ Frequency, data=metadata,  permutations=99, method
 adReplicate <- adonis2(dist ~ Replicate, data=metadata,  permutations=99, method="bray")
 adTime <- adonis2(dist ~ Time, data=metadata,  permutations=99, method="bray")
 adRun <- adonis2(dist ~ Run, data=metadata,  permutations=99, method="bray")
+
 adSubstrate
-adonis2(dist ~ Substrate, data=metadata, permutations=99, method="bray")
-
-adSubFre <- adonis2(dist ~ Substrate * Frequency, data=metadata,  permutations=99, method="bray")
-adTiFre <- adonis2(dist ~ Time * Frequency, data=metadata,  permutations=99, method="bray")
-
-
+adFrequency
+adReplicate
+adTime
+adRun
 
 Variables <- c("Substrate", "Frequency", "Replicate", "Time", "Illumina Run")
-ANOSIM_R <- c(0.912,0.083,-0.009,0.008,0.041)
-ANOSIM_p <- c(0.001,0.001,0.993,0.165,0.001)
-PERMANOVA <- c(0.624,0.115,0.003,0.11,0.023)
-PERMANOVA_p <- c(0.010,0.010,1,0.040,0.010)
+ANOSIM_R <- c(0.9602,0.07944,-0.009,0.005,0.037)
+ANOSIM_p <- c(0.001,0.001,0.988,0.195,0.001)
+PERMANOVA <- c(0.655,0.113,0.002,0.010,0.021)
+PERMANOVA_p <- c(0.010,0.010,0.99,0.04,0.03)
 
 stat_table <- data.frame(Variables, ANOSIM_R, ANOSIM_p, PERMANOVA, PERMANOVA_p)
 colnames(stat_table) <- c("Variable", "ANOSIM", "ANOSIM \n p-value", "PERMANOVA", "PERMANOVA \n p-value")
 
 p_stat_table <- ggtexttable(stat_table, rows = NULL,
-                            theme = ttheme("classic"))
+                            theme = ttheme("light"))
 p_stat_table
 
 
@@ -248,71 +238,20 @@ fig3 <- ggdraw () +
   draw_plot(p2, x = 0.7, y = .8, width = .2, height = .2) +
   draw_plot(p3, x = 0.6, y = 0.4, width = 0.4, height = 0.4) +
   draw_plot(p4, x = 0, y = 0, width = 1, height = 0.4) +
-  draw_plot_label(label = c("A", "B", "C", "D"), size = 15,
+  draw_plot_label(label = c("A", "B", "C", "D"), size = 25,
                   x = c(0, 0.6, 0.6, 0), y = c(1, 1, 0.8, 0.4))
 fig3
 
 ggsave("Figure_3.tiff", device = "tiff", dpi = 700)
+ggsave("Figure_3.png", device = "png", dpi = 700)
+ggsave("Figure_3.pdf", device = "pdf", dpi = 700)
 
 
 ####### ######## 3D plot ########################
-mycolors <- c("#7fbf7b","#e9a3c9")
-data$color <- mycolors[as.numeric(data$Substrate)]
 
-##subset data to add to graph
-data1 <- subset(data, data$Frequency=="1")
-data2 <- subset(data, data$Frequency=="2")
-data3 <- subset(data, data$Frequency=="3")
-data5 <- subset(data, data$Frequency=="5")
-data7 <- subset(data, data$Frequency=="7")
-
-##plot, add
-
-open3d()
-pch3d(x=data1$MDS1, y=data1$MDS2, z=data1$MDS3, cex=0.7, bg = data1$color, pch=21)
-pch3d(x=data2$MDS1, y=data2$MDS2, z=data2$MDS3, cex=0.7, bg = data2$color, pch=22)
-pch3d(x=data3$MDS1, y=data3$MDS2, z=data3$MDS3, cex=0.7, bg = data3$color, pch=23)
-pch3d(x=data5$MDS1, y=data5$MDS2, z=data5$MDS3, cex=0.7, bg = data5$color, pch=24)
-pch3d(x=data7$MDS1, y=data7$MDS2, z=data7$MDS3, cex=0.7, bg = data7$color, pch=25)
-axes3d()
-
-title3d(xlab="NMDS1", ylab="NMDS2", zlab="NMDS3")
-
-
-legend3d( "topright", title="Frequency", c("7", "5", "3","2","1"), 
-          pch = c(25,24,23,22,21))
-
-k <- sort(unique(data$Substrate))
-legend3d("right", legend=k, pch=18, col=mycolors, title="Substrate")
-
-
-##3d plot, color by frequency
-
-
-mycolors2 <- c("#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854")
-data$colors <- mycolors2[as.numeric(data$Frequency)]
-
-datac <- subset(data, data$Substrate=="Cellulose")
-datag <- subset(data, data$Substrate=="Glucose")
-
-
-open3d()
-par3d(windowRect = c(100, 100, 612, 612))
-pch3d(x=datac$MDS1, y=datac$MDS2, z=datac$MDS3, cex=0.4, bg = datac$color, pch=21)
-pch3d(x=datag$MDS1, y=datag$MDS2, z=datag$MDS3, cex=0.7, bg = datag$color, pch=22)
-axes3d()
-
-title3d(xlab="NMDS1", ylab="NMDS2", zlab="NMDS3")
-
-l <- sort(unique(data$Frequency))
-legend3d("right", legend=l, pch=18, col=mycolors2, title="Frequency")
-legend3d("topright", title="Substrate", c("Cellulose", "Glucose"), 
-          pch = c(21,22))
-
-rgl.postscript("plot.pdf",fmt="pdf")
 
 ####### 3D plot #############
-source('~/hubiC/Documents/R/function/addgrids3d.r')
+#source('~/hubiC/Documents/R/function/addgrids3d.r')
 
 
 colors <- c("#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854")
@@ -323,14 +262,14 @@ data$shapes <- shapes[as.numeric(data$Substrate)]
 
 scatterplot3d(data[,8:10], pch = data$shapes, color = data$colors, box = TRUE, angle = 60, xlab="NMDS1", ylab="NMDS2", zlab="NMDS3")
 legend("topleft", legend = levels(data$Frequency), col = c("#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854"), pch = 16, title = "Frequency")
-legend("bottomright", legend = levels(data$Substrate), pch = c(19.15), xpd = TRUE, title = "Substrate")
+legend("bottomright", legend = levels(data$Substrate), pch = c(19,15), xpd = TRUE, title = "Substrate")
 
 
-tiff('Supplemental_Figure_4.tiff', units="in", width=8, height=9, res=1200, compression = 'lzw')
+tiff('Supplemental_Figure_3_3d.tiff', units="in", width=8, height=9, res=700, compression = 'lzw')
 
 scatterplot3d(data[,8:10], pch = data$shapes, color = data$colors, box = TRUE, angle = 60, xlab="NMDS1", ylab="NMDS2", zlab="NMDS3")
 legend("topleft", legend = levels(data$Frequency), col = c("#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854"), pch = 16, title = "Frequency")
-legend("bottomright", legend = levels(data$Substrate), pch = c(19.15), xpd = TRUE, title = "Substrate")
+legend("bottomright", legend = levels(data$Substrate), pch = c(19,15), xpd = TRUE, title = "Substrate")
 
 
 
