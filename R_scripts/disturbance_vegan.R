@@ -136,6 +136,7 @@ p_stats <- ggtexttable(tab_total2, rows = NULL,
 p_stats <- tab_add_title(p_stats, "Student's T-test of Hill 1 Diversity", size = 15)
 p_stats
 
+ggsave("diversity_stats.png", device = "png", dpi = 700)
 
 
 p1 <- pHill1 
@@ -230,39 +231,79 @@ hill_total$Frequency2 <- as.numeric(hill_total$Frequency2)
 pHill1_lin <-ggplot(hill_total, aes(x = Frequency2, y = Hill1, color = Substrate)) +
   geom_point() +
   stat_poly_line(formula = y ~ x, linetype = "dotted", se = T) +
-  stat_poly_eq(use_label(c("eq", "R2","p")),
+  stat_poly_eq(use_label(c("eq", "R2")),
                formula = y ~ x,
                label.x = "right") +
-  theme_classic(base_size=20)+
-  #theme(aspect.ratio=1) +
+  theme_classic(base_size=18)+
+  #theme(legend.position = "none") +
   scale_fill_manual(values=c("#e1f8df","#fff1f9")) + 
   scale_color_manual(values=c("#7fbf7b","#e9a3c9")) +
   scale_x_continuous(breaks = c(0.14285714285,0.2,0.33333333333,0.5,1),
                      labels = c("1/7","1/5","1/3","1/2","1/1")) +
   labs(y="Number of common ASVs", x="Disturbance Frequency (1/n days)") + 
-  ggtitle("Hill 1 Diversity, with Linear Regression")
+  ggtitle("Hill 1 Diversity, Linear Regression")
 pHill1_lin
 
 
 pHill1_poly <- ggplot(hill_total, aes(x = Frequency2, y = Hill1, color = Substrate)) +
   geom_point() +
   stat_poly_line(formula = y ~ poly(x,2), linetype = "dotted", se = T) +
-  stat_poly_eq(use_label(c("eq", "R2","p")),
+  stat_poly_eq(use_label(c("eq", "R2")),
                formula = y ~ poly(x, 2),
                label.x = "right") +
-  theme_classic(base_size=20)+
-  #theme(aspect.ratio=1) +
+  theme_classic(base_size=18)+
+  #theme(legend.position = "none") +
   scale_fill_manual(values=c("#e1f8df","#fff1f9")) + 
   scale_color_manual(values=c("#7fbf7b","#e9a3c9")) +
   scale_x_continuous(breaks = c(0.14285714285,0.2,0.33333333333,0.5,1),
                      labels = c("1/7","1/5","1/3","1/2","1/1")) +
   labs(y="Number of common ASVs", x="Disturbance Frequency (1/n days)") + 
-  ggtitle("Hill 1 Diversity, with Quadratic Reggression")
+  ggtitle("Hill 1 Diversity, Quadratic Regression")
 pHill1_poly
 
+preg <- ggarrange(pHill1_lin, pHill1_poly, common.legend = TRUE, legend = "right", labels = "AUTO", font.label=list(size = 20) )
 
-ggarrange(pHill1_lin, pHill1_poly, common.legend = TRUE, legend = "bottom", labels = "AUTO", font.label=list(size = 20) )
 
+
+x <- c(1/1, 1/2, 1/3, 1/5, 1/7)
+c_lin <- 4.31-(1.26*x)
+g_lin <- 1.51 + (1.89*x)
+c_quad <- 3.8 - (4.68*x) - (4.57 * (x^2))
+g_quad <- 2.25 + (6.54*x) - (1.26 * (x^2))
+
+predicted <- data.frame(x, c_lin, g_lin, c_quad, g_quad)
+predicted <- melt(predicted, id = c("x"))
+Substrate_Frequency <- c("1C","2C","3C","5C","7C","1G","2G","3G","5G","7G","1C","2C","3C","5C","7C","1G","2G","3G","5G","7G")
+predicted <-cbind(predicted, Substrate_Frequency)
+
+hill_total <- merge(hill_total, predicted, by = "Substrate_Frequency")
+
+hill_total <- hill_total %>%
+  mutate(variable = str_replace(variable, "g_|c_", ""))
+
+hill_total <- hill_total %>%
+  mutate(variable = str_replace(variable, "lin", "Linear"))
+
+hill_total <- hill_total %>%
+  mutate(variable = str_replace(variable, "quad", "Quadratic"))
+
+hill_total$residual <- (hill_total$Hill1) - (hill_total$value)
+
+hill_total$Frequency <- factor(hill_total$Frequency, levels = c("7", "5", "3", "2", "1"))
+
+
+p_resid <- ggplot(hill_total, aes(x = value, y = residual, shape = variable, color = Frequency)) +
+  geom_point(size = 3) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey") +
+  theme_classic(base_size = 18) + 
+  scale_color_manual(values=c("#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854")) +
+  labs(y="Residuals", x="Predicted Hill 1") + 
+  guides(shape=guide_legend("Regression")) +
+  facet_grid(~Substrate)
+  
+p_resid
+
+ggarrange(preg, p_resid, ncol = 1, labels = c("", "C"), font.label = list(size = 20))
 
 ggsave("regression.tiff", device = "tiff", dpi = 700)
 ggsave("regression.png", device = "png", dpi = 700)

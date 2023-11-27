@@ -39,6 +39,10 @@ data <- cbind(metadata, nmds_coords)
 
 #Run 20 stress 0.03723448 ... Procrustes: rmse 0.0001984676  max resid 0.003191145 
 #color by freq. Coloring by Freq easier to read imo, keep this one
+
+data <- read.csv("disturbance_ordination_coords_no2CDay5.csv", header = TRUE)
+data$Frequency <- as.character(data$Frequency)
+data$Frequency <- factor(data$Frequency, levels=c("7","5","3","2","1"))
 plot2 <- ggplot() +
   geom_point(data=data,
              aes(x=MDS1, y=MDS2, color=Frequency, bg=Frequency, shape=Substrate),
@@ -46,13 +50,15 @@ plot2 <- ggplot() +
   theme_classic(base_size=15) +
   xlab("NMDS1") +
   ylab("NMDS2") +
-  annotate(geom="text", x = -1.2, y = 1.25, label = "Stress = 0.037", size = 6) +
+  #annotate(geom="text", x = -1.2, y = 1.25, label = "Stress = 0.037", size = 6) +
   scale_color_manual(values=c("#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854")) +
   scale_fill_manual(values=c("#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854")) +
   scale_shape_manual(values=c(21,22)) +
   guides(fill=guide_legend(ncol=2)) +
   ggtitle("Biplot of Bray-Curtis Distance Matrix")
 plot2
+
+#ggsave("biplot.png", dpi = 700)
 
 ######## stats ###########
 #https://chrischizinski.github.io/rstats/adonis/
@@ -106,12 +112,14 @@ p_stat_table <- ggtexttable(stat_table, rows = NULL,
                             theme = ttheme("light"))
 p_stat_table
 
+ggsave("ord_stats.png", device = "png", dpi = 700)
 
 p1 <- plot2 + annotation_custom(ggplotGrob(p_stat_table),xmin = 0.25, ymin= 0.75, xmax= 1)
 p1
 
 ######### centroid calculations #############
 dist <- vegdist(otu) #create distance matrix
+metadata$Substrate_Time <- paste(metadata$Substrate, metadata$Time, sep = "_")
 attach(metadata) #attach metadata
 
 
@@ -172,8 +180,25 @@ dtc <- dtc %>%
 dtc$Frequency <- factor(dtc$Frequency, levels = c("7","5","3","2","1"))
 
 
+###distance to centroid (how much variation is there within time sampling, between substrates?) #######
+
+dtc_time <- dist_to_centroids(dist, Substrate_Time)
+###you calculated all samples to all centroids. keep only the ones that match their respective grouping.
+#str_split to create variable to filter with
+dtc_time[c("Substrate_Frequency", "Replicate","Day")] <- str_split_fixed(dtc_time$Item, "_", 3)
+dtc_time$Frequency <- substr(dtc_time$Substrate_Frequency, 1, 1)
+dtc_time$Substrate <- dtc_time$Substrate_Frequency
+dtc_time$Substrate <- gsub("^.{0,1}", "", dtc_time$Substrate)
+dtc_time$Substrate <- str_replace_all(dtc_time$Substrate, "C", "Cellulose")
+dtc_time$Substrate <- str_replace_all(dtc_time$Substrate, "G", "Glucose")
+dtc_time$Substrate_Time <- paste(dtc_time$Substrate, dtc_time$Day, sep = "_")
+dtc_time <- dtc_time[which(dtc_time[,2] == dtc_time[,8]), ]
+dtc_time$Frequency <- factor(dtc_time$Frequency, levels = c("7","5","3","2","1"))
+
+
 #plot centroid calculations
 
+font_size <- 20
 
 stats_data <- function(y) {
   return(data.frame(
@@ -189,10 +214,11 @@ p_dbc <- ggplot(dbc, aes(x = Substrate, y = distance, color = Substrate, fill = 
   theme_classic(base_size = 15) +
   scale_fill_manual(values=c("#e1f8df","#fff1f9")) +
   scale_color_manual(values=c("#7fbf7b","#e9a3c9")) +
-  stat_compare_means(method = "t.test", label = "p.signif", label.x = c(1.5))+
+  stat_compare_means(method = "t.test", label = "p.signif", label.x = c(1.5), size = 5)+
   stat_summary(fun.data = stats_data,
                geom = "text",
-               position = position_dodge(width = 0.75)) +
+               position = position_dodge(width = 0.75),
+               size = 4) +
   labs(y="Distance") +
   ggtitle("Distance Between Centroids")
 p_dbc
@@ -216,16 +242,17 @@ p_dtc <- ggplot(dtc, aes(x = Frequency, y = CentroidDistance, color = Substrate,
   scale_color_manual(values=c("#7fbf7b","#e9a3c9")) +
   #facet_grid(~Substrate, scales = "free") +
   scale_x_discrete(labels = c("1/7","1/5","1/3","1/2","1/1"))+
-  stat_compare_means(method = "t.test", label = "p.signif", label.x = c(1.5))+
+  stat_compare_means(method = "t.test", label = "p.signif", label.x = c(1.5), size = 5)+
   stat_summary(fun.data = stats_data2,
                geom = "text",
-               position = position_dodge(width = 0.75)) +
+               position = position_dodge(width = 0.75),
+               size = 4) +
   labs(y="Distance", x = "Disturbance Frequency") +
   ggtitle("Distance to Centroids")
 p_dtc
 
 
-
+compare_means(CentroidDistance ~ Frequency, data = dtc, group.by = "Substrate", method = "anova")
 
 
 p1 <- plot2 
@@ -246,6 +273,40 @@ ggsave("Figure_3.tiff", device = "tiff", dpi = 700)
 ggsave("Figure_3.png", device = "png", dpi = 700)
 ggsave("Figure_3.pdf", device = "pdf", dpi = 700)
 
+
+
+stats_data2 <- function(y) {
+  return(data.frame(
+    y=0.72,
+    label = paste('n =', length(y), '\n')
+  ))
+}
+
+p_dtc_time <- ggplot(dtc_time, aes(x = Day, y = CentroidDistance, color = Substrate, fill = Substrate)) +
+  geom_boxplot(lwd = 1, outlier.size = 2) +
+  #geom_jitter(width = 0.15) +
+  theme_classic(base_size = 15) +
+  #theme(legend.position="none") +
+  scale_fill_manual(values=c("#e1f8df","#fff1f9")) +
+  scale_color_manual(values=c("#7fbf7b","#e9a3c9")) +
+  #facet_grid(~Substrate, scales = "free") +
+  stat_compare_means(method = "t.test", label = "p.signif", label.x = c(1.5), size = 5)+
+  stat_summary(fun.data = stats_data2,
+               geom = "text",
+               position = position_dodge(width = 0.75),
+               size = 4) +
+  labs(y="Distance", x = "Day Sampled") +
+  ggtitle("Distance to Centroids")
+p_dtc_time
+
+compare_means(CentroidDistance ~ Day, data = dtc_time, group.by = "Substrate", method = "anova")
+
+ggsave("Supplemental_Figure_4_dtc_time.tiff", device = "tiff", dpi = 700)
+ggsave("Supplemental_Figure_4_dtc_time.png", device = "png", dpi = 700)
+ggsave("Supplemental_Figure_4_dtc_time.pdf", device = "pdf", dpi = 700)
+
+
+#scale_fill_manual(values=c("#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854"))
 
 ####### ######## 3D plot ########################
 
