@@ -32,7 +32,7 @@ ordination.model <- metaMDS(otu, distance='bray', k=3)
 nmds_coords <- ordination.model$points
 
 #attach to metadata
-data <- cbind(metadata, nmds_coords)
+#data <- cbind(metadata, nmds_coords)
 #write.csv(data, "disturbance_ordination_coords_no2CDay5.csv", row.names=FALSE)
 
 ####2d nmds plot#######
@@ -45,20 +45,20 @@ data$Frequency <- as.character(data$Frequency)
 data$Frequency <- factor(data$Frequency, levels=c("7","5","3","2","1"))
 plot2 <- ggplot() +
   geom_point(data=data,
-             aes(x=MDS1, y=MDS2, color=Frequency, bg=Frequency, shape=Substrate),
-             size=3) +
+             aes(x=MDS1, y=MDS2, shape=Substrate, color=Frequency, bg=Frequency),
+             size=2.5) +
   theme_classic(base_size=15) +
   xlab("NMDS1") +
   ylab("NMDS2") +
   #annotate(geom="text", x = -1.2, y = 1.25, label = "Stress = 0.037", size = 6) +
+  scale_shape_manual(values=c(21,22)) +
   scale_color_manual(values=c("#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854")) +
   scale_fill_manual(values=c("#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854")) +
-  scale_shape_manual(values=c(21,22)) +
-  guides(fill=guide_legend(ncol=2)) +
+  guides(shape=guide_legend(order = 1)) +
   ggtitle("Biplot of Bray-Curtis Distance Matrix")
 plot2
 
-#ggsave("biplot.png", dpi = 700)
+#ggsave("biplot.png", dpi = 300)
 
 ######## stats ###########
 #https://chrischizinski.github.io/rstats/adonis/
@@ -109,13 +109,13 @@ stat_table <- data.frame(Variables, ANOSIM_R, ANOSIM_p, PERMANOVA, PERMANOVA_p)
 colnames(stat_table) <- c("Variable", "ANOSIM", "ANOSIM \n p-value", "PERMANOVA", "PERMANOVA \n p-value")
 
 p_stat_table <- ggtexttable(stat_table, rows = NULL,
-                            theme = ttheme("light"))
+                            theme = ttheme("blank"))
 p_stat_table
 
-ggsave("ord_stats.png", device = "png", dpi = 700)
+#ggsave("ord_stats.png", device = "png", dpi = 300)
 
-p1 <- plot2 + annotation_custom(ggplotGrob(p_stat_table),xmin = 0.25, ymin= 0.75, xmax= 1)
-p1
+#p1 <- plot2 + annotation_custom(ggplotGrob(p_stat_table),xmin = 0.25, ymin= 0.75, xmax= 1)
+#p1
 
 ######### centroid calculations #############
 dist <- vegdist(otu) #create distance matrix
@@ -192,7 +192,8 @@ dtc_time$Substrate <- gsub("^.{0,1}", "", dtc_time$Substrate)
 dtc_time$Substrate <- str_replace_all(dtc_time$Substrate, "C", "Cellulose")
 dtc_time$Substrate <- str_replace_all(dtc_time$Substrate, "G", "Glucose")
 dtc_time$Substrate_Time <- paste(dtc_time$Substrate, dtc_time$Day, sep = "_")
-dtc_time <- dtc_time[which(dtc_time[,2] == dtc_time[,8]), ]
+
+dtc_time <- dtc_time[which(dtc_time[,2] == dtc_time[,9]), ]
 dtc_time$Frequency <- factor(dtc_time$Frequency, levels = c("7","5","3","2","1"))
 
 
@@ -255,55 +256,57 @@ p_dtc
 compare_means(CentroidDistance ~ Frequency, data = dtc, group.by = "Substrate", method = "anova")
 
 
-p1 <- plot2 
+p1 <- plot2 + theme(legend.position = c(0.8,0.85), legend.box = "horizontal", legend.background = element_blank(),legend.box.background = element_rect(linetype = "dashed", colour = "black"))
+p1
 p2 <- p_stat_table
 p3 <- p_dbc +theme(legend.position="none") 
 p4 <- p_dtc
 
 fig3 <- ggdraw () +
-  draw_plot(p1, x = 0, y = .4, width = .6, height = .6) +
-  draw_plot(p2, x = 0.7, y = .8, width = .2, height = .2) +
-  draw_plot(p3, x = 0.6, y = 0.4, width = 0.4, height = 0.4) +
+  draw_plot(p1, x = 0, y = .4, width = .5, height = .6) +
+  draw_plot(p2, x = 0.65, y = .8, width = .2, height = .2) +
+  draw_plot(p3, x = 0.55, y = 0.4, width = 0.4, height = 0.4) +
   draw_plot(p4, x = 0, y = 0, width = 1, height = 0.4) +
   draw_plot_label(label = c("A", "B", "C", "D"), size = 25,
-                  x = c(0, 0.6, 0.6, 0), y = c(1, 1, 0.8, 0.4))
-fig3
+                  x = c(0, 0.54, 0.54, 0), y = c(1, 1, 0.8, 0.4))
 
-ggsave("Figure_3.tiff", device = "tiff", dpi = 700)
-ggsave("Figure_3.png", device = "png", dpi = 700)
-ggsave("Figure_3.pdf", device = "pdf", dpi = 700)
+#fig3
+
+ggsave("Figure_3_ordination.tiff",width = 12, height = 12, units = "in", device = "tiff", dpi = 300)
+#ggsave("Figure_3.png", device = "png", dpi = 300)
+#ggsave("Figure_3.pdf", device = "pdf", dpi = 300)
 
 
 
 stats_data2 <- function(y) {
   return(data.frame(
-    y=0.72,
+    y=0.73,
     label = paste('n =', length(y), '\n')
   ))
 }
 
 p_dtc_time <- ggplot(dtc_time, aes(x = Day, y = CentroidDistance, color = Substrate, fill = Substrate)) +
-  geom_boxplot(lwd = 1, outlier.size = 2) +
+  geom_boxplot(lwd = 0.8, outlier.size = 1.5) +
   #geom_jitter(width = 0.15) +
-  theme_classic(base_size = 15) +
-  #theme(legend.position="none") +
+  theme_classic(base_size = 13) +
+  theme(legend.position="bottom") +
   scale_fill_manual(values=c("#e1f8df","#fff1f9")) +
   scale_color_manual(values=c("#7fbf7b","#e9a3c9")) +
   #facet_grid(~Substrate, scales = "free") +
   stat_compare_means(method = "t.test", label = "p.signif", label.x = c(1.5), size = 5)+
   stat_summary(fun.data = stats_data2,
                geom = "text",
-               position = position_dodge(width = 0.75),
-               size = 4) +
+               position = position_dodge(width = 0.9),
+               size = 3) +
   labs(y="Distance", x = "Day Sampled") +
   ggtitle("Distance to Centroids")
-p_dtc_time
+#p_dtc_time
 
-compare_means(CentroidDistance ~ Day, data = dtc_time, group.by = "Substrate", method = "anova")
+#compare_means(CentroidDistance ~ Day, data = dtc_time, group.by = "Substrate", method = "anova")
 
-ggsave("Supplemental_Figure_4_dtc_time.tiff", device = "tiff", dpi = 700)
-ggsave("Supplemental_Figure_4_dtc_time.png", device = "png", dpi = 700)
-ggsave("Supplemental_Figure_4_dtc_time.pdf", device = "pdf", dpi = 700)
+ggsave("Supplemental_Figure_5_dtc_time.tiff", height = 5, width = 6.8, device = "tiff", dpi = 300)
+#ggsave("Supplemental_Figure_5_dtc_time.png", device = "png", dpi = 300)
+#ggsave("Supplemental_Figure_5_dtc_time.pdf", device = "pdf", dpi = 300)
 
 
 #scale_fill_manual(values=c("#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854"))
@@ -313,6 +316,11 @@ ggsave("Supplemental_Figure_4_dtc_time.pdf", device = "pdf", dpi = 700)
 
 ####### 3D plot #############
 #source('~/hubiC/Documents/R/function/addgrids3d.r')
+
+data <- read.csv("disturbance_ordination_coords_no2CDay5.csv", header = TRUE)
+data$Frequency <- as.character(data$Frequency)
+data$Frequency <- factor(data$Frequency, levels=c("7","5","3","2","1"))
+data$Substrate <- factor(data$Substrate, levels=c("Cellulose","Glucose"))
 
 
 colors <- c("#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854")
@@ -326,7 +334,7 @@ legend("topleft", legend = levels(data$Frequency), col = c("#66c2a5","#fc8d62","
 legend("bottomright", legend = levels(data$Substrate), pch = c(19,15), xpd = TRUE, title = "Substrate")
 
 
-tiff('Supplemental_Figure_3_3d.tiff', units="in", width=8, height=9, res=700, compression = 'lzw')
+tiff('Supplemental_Figure_3_3d.tiff', units="in", width=8, height=8, res=600, compression = 'lzw')
 
 scatterplot3d(data[,8:10], pch = data$shapes, color = data$colors, box = TRUE, angle = 60, xlab="NMDS1", ylab="NMDS2", zlab="NMDS3")
 legend("topleft", legend = levels(data$Frequency), col = c("#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854"), pch = 16, title = "Frequency")

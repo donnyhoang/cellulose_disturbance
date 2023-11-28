@@ -77,6 +77,8 @@ dataglu <- subset(hill_total, Substrate == "Glucose")
 
 tab1<-compare_means(Hill1 ~ Frequency, data=datacel, ref.group="3", method="t.test")
 tab1$Substrate <- "Cellulose"
+
+
 tab2<-compare_means(Hill1 ~ Frequency, data=dataglu, ref.group="1", method="t.test")
 tab2$Substrate <- "Glucose"
 
@@ -97,8 +99,14 @@ tab_total2 <- tab_total %>%
          across("Comparison", str_replace, "5", "1/5"),
          across("Comparison", str_replace, "7", "1/7"))
 
-tab_total2 <- tab_total2[,c(9,8,2,3,6,7)]
-colnames(tab_total2) <- c("Substrate", "Method","Reference \n Frequency","Comparison \n Frequency","p-value","Significance")
+tab_total2 <- tab_total2[,c(9,8,2,3,6)]
+colnames(tab_total2) <- c("Substrate", "Method","Reference \n Frequency","Comparison \n Frequency","p-value")
+
+tab3 <- compare_means(Hill1 ~ Substrate, data=hill_total, group.by = "Frequency", method = "t.test")
+tab3$Frequency <- c("1/1", "1/2", "1/3", "1/5", "1/7")
+tab3 <- tab3[,c(1,9,3,4,7)]
+tab3 <- tab3[c(5,4,3,2,1),]
+colnames(tab3) <- c("Frequency", "Method","Reference","Comparison","p-value")
 
 ###### Graph Hill numbers #######
 
@@ -131,24 +139,29 @@ pHill1
 
 
 p_stats <- ggtexttable(tab_total2, rows = NULL,
-                            theme = ttheme("light")) +
-  theme(plot.margin = unit(c(0,0,0,0), "cm"))
-p_stats <- tab_add_title(p_stats, "Student's T-test of Hill 1 Diversity", size = 15)
-p_stats
+                            theme = ttheme("blank"))
+p_stats <- tab_add_title(p_stats, "Comparison of Hill 1 means of \n selected frequency treatments", size = 20)
 
-ggsave("diversity_stats.png", device = "png", dpi = 700)
+p_stats2 <- ggtexttable(tab3, rows = NULL,
+                       theme = ttheme("blank"))
+p_stats2 <- tab_add_title(p_stats2, "Comparison of Hill 1 means \n between substrate treatments", size = 20)
 
 
 p1 <- pHill1 
 p2 <- p_stats
+p3 <- p_stats2
 
-fig4 <- plot_grid(p1, p2, labels = "AUTO", label_size = 25, rel_widths = c(1.3,1), rel_heights = c(1,1))
-fig4
+fig4 <- ggdraw () +
+  draw_plot(p1, x = 0, y = 0, width = .58, height = 1) +
+  draw_plot(p2, x = 0.65, y = 0.24, width = .3, height = 1) +
+  draw_plot(p3, x = 0.65, y = -.25, width = .3, height = 1) +
+  draw_plot_label(label = c("A", "B", "C"), size = 25,
+                  x = c(0, 0.556, 0.56), y = c(1, 1, 0.44))
+#fig4
 
-
-ggsave("Figure_hill1.tiff", device = "tiff", dpi = 700)
-ggsave("Figure_hill1.png", device = "png", dpi = 700)
-ggsave("Figure_hill1.pdf", device = "pdf", dpi = 700)
+ggsave("Figure_4_hill1.tiff", width = 10.5, height = 6.7, units = "in", device = "tiff", dpi = 300)
+#ggsave("Figure_hill1.png", device = "png", dpi = 300)
+#ggsave("Figure_hill1.pdf", device = "pdf", dpi = 300)
 
 
 
@@ -169,7 +182,7 @@ pHill0 <-ggplot(hill_total, aes(x = Frequency2, y = Hill0, color = Substrate, fi
   stat_compare_means(method = "t.test", label = "p.signif", label.x = c(1.5))+
   stat_summary(fun.data = stats_data1,
                geom = "text",
-               position = position_dodge(width = 0.8)) +
+               position = position_dodge(width = 0.9)) +
   theme_classic(base_size=15)+
   theme(legend.position = "bottom") +
   scale_fill_manual(values=c("#e1f8df","#fff1f9")) + 
@@ -192,7 +205,7 @@ pHill2 <-ggplot(hill_total, aes(x = Frequency2, y = Hill2, color = Substrate, fi
   stat_compare_means(method = "t.test", label = "p.signif", label.x = c(1.5))+
   stat_summary(fun.data = stats_data2,
                geom = "text",
-               position = position_dodge(width = 0.8)) +
+               position = position_dodge(width = 0.9)) +
   theme_classic(base_size=15)+
   theme(legend.position = "bottom") +
   scale_fill_manual(values=c("#e1f8df","#fff1f9")) + 
@@ -205,9 +218,9 @@ pHill2
 
 ggarrange(pHill0, pHill2, common.legend = TRUE, legend = "bottom", labels = "AUTO", font.label=list(size = 20))
 
-ggsave("Hill0_Hill2.tiff", device = "tiff", dpi = 700)
-ggsave("Hill0_Hill2.png", device = "png", dpi = 700)
-ggsave("Hill0_Hill2.pdf", device = "pdf", dpi = 700)
+ggsave("Supplemental_Figure_2_Hill0_Hill2.tiff", device = "tiff", width = 10.8, height = 6.5, units = "in", dpi = 300)
+#ggsave("Hill0_Hill2.png", device = "png", dpi = 300)
+#ggsave("Hill0_Hill2.pdf", device = "pdf", dpi = 300)
 
 
 #lets do all three for fun
@@ -230,35 +243,39 @@ phill
 hill_total$Frequency2 <- as.numeric(hill_total$Frequency2)
 pHill1_lin <-ggplot(hill_total, aes(x = Frequency2, y = Hill1, color = Substrate)) +
   geom_point() +
+  ylim(1,9.5) +
   stat_poly_line(formula = y ~ x, linetype = "dotted", se = T) +
   stat_poly_eq(use_label(c("eq", "R2")),
                formula = y ~ x,
-               label.x = "right") +
-  theme_classic(base_size=18)+
+               label.x = "left",
+               label.y = "top") +
+  theme_classic(base_size=13)+
   #theme(legend.position = "none") +
   scale_fill_manual(values=c("#e1f8df","#fff1f9")) + 
   scale_color_manual(values=c("#7fbf7b","#e9a3c9")) +
   scale_x_continuous(breaks = c(0.14285714285,0.2,0.33333333333,0.5,1),
                      labels = c("1/7","1/5","1/3","1/2","1/1")) +
   labs(y="Number of common ASVs", x="Disturbance Frequency (1/n days)") + 
-  ggtitle("Hill 1 Diversity, Linear Regression")
+  ggtitle("Hill 1, Linear Regression")
 pHill1_lin
 
 
 pHill1_poly <- ggplot(hill_total, aes(x = Frequency2, y = Hill1, color = Substrate)) +
   geom_point() +
+  ylim(1,9.5) +
   stat_poly_line(formula = y ~ poly(x,2), linetype = "dotted", se = T) +
   stat_poly_eq(use_label(c("eq", "R2")),
                formula = y ~ poly(x, 2),
-               label.x = "right") +
-  theme_classic(base_size=18)+
+               label.x = "left",
+               label.y = "top") +
+  theme_classic(base_size=13)+
   #theme(legend.position = "none") +
   scale_fill_manual(values=c("#e1f8df","#fff1f9")) + 
   scale_color_manual(values=c("#7fbf7b","#e9a3c9")) +
   scale_x_continuous(breaks = c(0.14285714285,0.2,0.33333333333,0.5,1),
                      labels = c("1/7","1/5","1/3","1/2","1/1")) +
   labs(y="Number of common ASVs", x="Disturbance Frequency (1/n days)") + 
-  ggtitle("Hill 1 Diversity, Quadratic Regression")
+  ggtitle("Hill 1, Quadratic Regression")
 pHill1_poly
 
 preg <- ggarrange(pHill1_lin, pHill1_poly, common.legend = TRUE, legend = "right", labels = "AUTO", font.label=list(size = 20) )
@@ -295,7 +312,7 @@ hill_total$Frequency <- factor(hill_total$Frequency, levels = c("7", "5", "3", "
 p_resid <- ggplot(hill_total, aes(x = value, y = residual, shape = variable, color = Frequency)) +
   geom_point(size = 3) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey") +
-  theme_classic(base_size = 18) + 
+  theme_classic(base_size = 13) + 
   scale_color_manual(values=c("#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854")) +
   labs(y="Residuals", x="Predicted Hill 1") + 
   guides(shape=guide_legend("Regression")) +
@@ -305,9 +322,9 @@ p_resid
 
 ggarrange(preg, p_resid, ncol = 1, labels = c("", "C"), font.label = list(size = 20))
 
-ggsave("regression.tiff", device = "tiff", dpi = 700)
-ggsave("regression.png", device = "png", dpi = 700)
-ggsave("regression.pdf", device = "pdf", dpi = 700)
+ggsave("Supplemental_Figure_4_regression.tiff", width = 8, height = 8, units = "in", device = "tiff", dpi = 300)
+#ggsave("regression.png", device = "png", dpi = 300)
+#ggsave("regression.pdf", device = "pdf", dpi = 300)
 
 
 
@@ -393,8 +410,8 @@ datag <- subset(data, data$Substrate=="Glucose")
 ## Bar graphs
 pg <-ggplot(datag) + 
   geom_bar(aes(y=value,x=Sample_Name,fill=variable, color = variable),stat="identity") + 
-  theme_classic(base_size=15) + #make it pretty
-  theme(axis.text.x=element_text(size = 10),
+  theme_classic(base_size=13) + #make it pretty
+  theme(axis.text.x=element_text(size = 8.5),
     legend.position="bottom",
     legend.text = element_markdown()) + 
   ylab("Relative Abundance (%)") + 
@@ -414,8 +431,8 @@ pg <-ggplot(datag) +
 
 pc <-ggplot(datac) + 
   geom_bar(aes(y=value,x=Sample_Name,fill=variable, color = variable),stat="identity") + 
-  theme_classic(base_size=15) + #make it pretty
-  theme(axis.text.x=element_text(size = 10),
+  theme_classic(base_size=13) + #make it pretty
+  theme(axis.text.x=element_text(size = 8.5),
     legend.position="bottom",
     legend.text = element_markdown()) + 
   ylab("Relative Abundance (%)") + 
@@ -436,9 +453,9 @@ pc <-ggplot(datac) +
 
 ggarrange(pc + rremove("xlab"), pg, common.legend = TRUE, ncol=1, nrow=2,legend = "bottom")
 
-ggsave("abundance.tiff", device = "tiff", dpi = 700)
-ggsave("abundance.png", device = "png", dpi = 700)
-ggsave("abundance.pdf", device = "pdf", dpi = 700)
+ggsave("Figure_2_abundance.tiff", width = 10.3, height = 6.8, units = "in", device = "tiff", dpi = 300)
+#ggsave("abundance.png", device = "png", dpi = 300)
+#ggsave("abundance.pdf", device = "pdf", dpi = 300)
 
 
 ######### BAR GRAPH of just DISTURBANCE FREQUENCY 2 FOR SUPPLEMENTAL ############
@@ -487,9 +504,9 @@ p_f2 <-ggplot(data2) +
 p_f2
 
 
-ggsave("freq2_abundance.tiff", device = "tiff", dpi = 700)
-ggsave("freq2_abundance.png", device = "png", dpi = 700)
-ggsave("freq2_abundance.pdf", device = "pdf", dpi = 700)
+ggsave("Supplemental_Figure_1_freq2_abundance.tiff", height = 7.5, width = 10, units = "in", device = "tiff", dpi = 300)
+#ggsave("freq2_abundance.png", device = "png", dpi = 300)
+#ggsave("freq2_abundance.pdf", device = "pdf", dpi = 300)
 
 ## Get summary table of ASVs for easy reference
 data2 <- data
