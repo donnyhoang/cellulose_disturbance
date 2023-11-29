@@ -223,7 +223,7 @@ plot2 <- ggplot() +
 p_stat_table <- ggtexttable(stat_table, rows = NULL,
                             theme = ttheme("blank", 
                                            base_size = 7.5,
-                                           padding = unit(c(0.7,3), "mm")))
+                                           padding = unit(c(0.5,3), "mm")))
 p_stat_table
 
 font_size <- 20
@@ -298,11 +298,11 @@ p4 <- p_dtc
 
 fig3 <- ggdraw () +
   draw_plot(p1, x = -0.015, y = .4, width = .6, height = .6, scale = 0.95) +
-  draw_plot(p2, x = 0.69, y = .79, width = .2, height = .2) +
-  draw_plot(p3, x = 0.58, y = 0.38, width = 0.4, height = 0.4, scale = 0.95) +
+  draw_plot(p2, x = 0.69, y = .77, width = .2, height = .2) +
+  draw_plot(p3, x = 0.58, y = 0.3755, width = 0.4, height = 0.4, scale = 0.95) +
   draw_plot(p4, x = 0, y = 0, width = 1, height = 0.4) +
   draw_plot_label(label = c("A", "B", "C", "D"), size = 20,
-                  x = c(0, 0.54, 0.54, 0), y = c(1, 1, 0.78, 0.4))
+                  x = c(0, 0.6, 0.6, 0), y = c(1, 1, 0.77, 0.4))
 
 #fig3
 
