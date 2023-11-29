@@ -58,8 +58,6 @@ plot2 <- ggplot() +
   ggtitle("Biplot of Bray-Curtis Distance Matrix")
 plot2
 
-#ggsave("biplot.png", dpi = 300)
-
 ######## stats ###########
 #https://chrischizinski.github.io/rstats/adonis/
 
@@ -109,7 +107,7 @@ stat_table <- data.frame(Variables, ANOSIM_R, ANOSIM_p, PERMANOVA, PERMANOVA_p)
 colnames(stat_table) <- c("Variable", "ANOSIM", "ANOSIM \n p-value", "PERMANOVA", "PERMANOVA \n p-value")
 
 p_stat_table <- ggtexttable(stat_table, rows = NULL,
-                            theme = ttheme("blank"))
+                            theme = ttheme("blank", base_size = 6.5))
 p_stat_table
 
 #ggsave("ord_stats.png", device = "png", dpi = 300)
@@ -199,6 +197,35 @@ dtc_time$Frequency <- factor(dtc_time$Frequency, levels = c("7","5","3","2","1")
 
 #plot centroid calculations
 
+####2d nmds plot#######
+
+#Run 20 stress 0.03723448 ... Procrustes: rmse 0.0001984676  max resid 0.003191145 
+#color by freq. Coloring by Freq easier to read imo, keep this one
+
+data <- read.csv("disturbance_ordination_coords_no2CDay5.csv", header = TRUE)
+data$Frequency <- as.character(data$Frequency)
+data$Frequency <- factor(data$Frequency, levels=c("7","5","3","2","1"))
+plot2 <- ggplot() +
+  geom_point(data=data,
+             aes(x=MDS1, y=MDS2, shape=Substrate, color=Frequency, bg=Frequency),
+             size=1) +
+  theme_classic(base_size=10) +
+  xlab("NMDS1") +
+  ylab("NMDS2") +
+  #annotate(geom="text", x = -1.2, y = 1.25, label = "Stress = 0.037", size = 6) +
+  scale_shape_manual(values=c(21,22)) +
+  scale_color_manual(values=c("#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854")) +
+  scale_fill_manual(values=c("#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854")) +
+  guides(shape=guide_legend(order = 1)) +
+  ggtitle("Biplot of Bray-Curtis Distance Matrix")
+
+
+p_stat_table <- ggtexttable(stat_table, rows = NULL,
+                            theme = ttheme("blank", 
+                                           base_size = 7.5,
+                                           padding = unit(c(0.7,3), "mm")))
+p_stat_table
+
 font_size <- 20
 
 stats_data <- function(y) {
@@ -212,14 +239,15 @@ stats_data <- function(y) {
 p_dbc <- ggplot(dbc, aes(x = Substrate, y = distance, color = Substrate, fill = Substrate)) +
   geom_boxplot(lwd = 1, outlier.shape = NA) +
   geom_jitter(size = 2, width = 0.15) +
-  theme_classic(base_size = 15) +
+  ylim(0,0.93) +
+  theme_classic(base_size = 10) +
   scale_fill_manual(values=c("#e1f8df","#fff1f9")) +
   scale_color_manual(values=c("#7fbf7b","#e9a3c9")) +
-  stat_compare_means(method = "t.test", label = "p.signif", label.x = c(1.5), size = 5)+
+  stat_compare_means(method = "t.test", label = "p.signif", label.x = c(1.5), size = 4)+
   stat_summary(fun.data = stats_data,
                geom = "text",
                position = position_dodge(width = 0.75),
-               size = 4) +
+               size = 3) +
   labs(y="Distance") +
   ggtitle("Distance Between Centroids")
 p_dbc
@@ -228,26 +256,27 @@ p_dbc
 
 stats_data2 <- function(y) {
   return(data.frame(
-    y=0.57,
+    y=0.6,
     label = paste('n =', length(y), '\n')
   ))
 }
 
 
 p_dtc <- ggplot(dtc, aes(x = Frequency, y = CentroidDistance, color = Substrate, fill = Substrate)) +
-  geom_boxplot(lwd = 1, outlier.size = 2) +
+  geom_boxplot(lwd = 1, outlier.size = 1.5) +
   #geom_jitter(width = 0.15) +
-  theme_classic(base_size = 15) +
+  ylim(0, 0.7) +
+  theme_classic(base_size = 10) +
   #theme(legend.position="none") +
   scale_fill_manual(values=c("#e1f8df","#fff1f9")) +
   scale_color_manual(values=c("#7fbf7b","#e9a3c9")) +
   #facet_grid(~Substrate, scales = "free") +
   scale_x_discrete(labels = c("1/7","1/5","1/3","1/2","1/1"))+
-  stat_compare_means(method = "t.test", label = "p.signif", label.x = c(1.5), size = 5)+
+  stat_compare_means(method = "t.test", label = "p.signif", label.x = c(1.5), size = 4)+
   stat_summary(fun.data = stats_data2,
                geom = "text",
                position = position_dodge(width = 0.75),
-               size = 4) +
+               size = 3) +
   labs(y="Distance", x = "Disturbance Frequency") +
   ggtitle("Distance to Centroids")
 p_dtc
@@ -256,23 +285,28 @@ p_dtc
 compare_means(CentroidDistance ~ Frequency, data = dtc, group.by = "Substrate", method = "anova")
 
 
-p1 <- plot2 + theme(legend.position = c(0.8,0.85), legend.box = "horizontal", legend.background = element_blank(),legend.box.background = element_rect(linetype = "dashed", colour = "black"))
-p1
+
+p1 <- plot2 + theme(legend.position = c(0.75,0.85), 
+                    legend.box = "horizontal",
+                    legend.background = element_blank(),
+                    legend.box.background = element_rect(linetype = "dashed", colour = "black"),
+                    legend.key.size = unit(0.09, 'cm'))
+#p1
 p2 <- p_stat_table
 p3 <- p_dbc +theme(legend.position="none") 
 p4 <- p_dtc
 
 fig3 <- ggdraw () +
-  draw_plot(p1, x = 0, y = .4, width = .5, height = .6) +
-  draw_plot(p2, x = 0.65, y = .8, width = .2, height = .2) +
-  draw_plot(p3, x = 0.55, y = 0.4, width = 0.4, height = 0.4) +
+  draw_plot(p1, x = -0.015, y = .4, width = .6, height = .6, scale = 0.95) +
+  draw_plot(p2, x = 0.69, y = .79, width = .2, height = .2) +
+  draw_plot(p3, x = 0.58, y = 0.38, width = 0.4, height = 0.4, scale = 0.95) +
   draw_plot(p4, x = 0, y = 0, width = 1, height = 0.4) +
-  draw_plot_label(label = c("A", "B", "C", "D"), size = 25,
-                  x = c(0, 0.54, 0.54, 0), y = c(1, 1, 0.8, 0.4))
+  draw_plot_label(label = c("A", "B", "C", "D"), size = 20,
+                  x = c(0, 0.54, 0.54, 0), y = c(1, 1, 0.78, 0.4))
 
 #fig3
 
-ggsave("Figure_3_ordination.tiff",width = 12, height = 12, units = "in", device = "tiff", dpi = 300)
+ggsave("Figure_3_ordination.tiff",width = 6.875, height = 6.875, units = "in", device = "tiff", dpi = 300)
 #ggsave("Figure_3.png", device = "png", dpi = 300)
 #ggsave("Figure_3.pdf", device = "pdf", dpi = 300)
 
@@ -287,6 +321,7 @@ stats_data2 <- function(y) {
 
 p_dtc_time <- ggplot(dtc_time, aes(x = Day, y = CentroidDistance, color = Substrate, fill = Substrate)) +
   geom_boxplot(lwd = 0.8, outlier.size = 1.5) +
+  ylim(0, 0.8) +
   #geom_jitter(width = 0.15) +
   theme_classic(base_size = 13) +
   theme(legend.position="bottom") +

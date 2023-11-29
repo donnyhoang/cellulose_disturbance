@@ -117,7 +117,7 @@ hill_total$Frequency2 <- as.factor(hill_total$Frequency2)
 
 stats_data <- function(y) {
   return(data.frame(
-    y=8,
+    y=7.8,
     label = paste('n=', length(y), '\n')
   ))
 }
@@ -126,8 +126,9 @@ pHill1 <-ggplot(hill_total, aes(x = Frequency2, y = Hill1, color = Substrate, fi
   geom_boxplot() +
   stat_summary(fun.data = stats_data,
                geom = "text",
-               position = position_dodge(width = 0.8)) +
-  theme_classic(base_size=15)+
+               position = position_dodge(width = 0.9),
+               size = 2.5) +
+  theme_classic(base_size=10)+
   theme(legend.position = "bottom") +
   scale_fill_manual(values=c("#e1f8df","#fff1f9")) + 
   scale_color_manual(values=c("#7fbf7b","#e9a3c9")) +
@@ -135,16 +136,18 @@ pHill1 <-ggplot(hill_total, aes(x = Frequency2, y = Hill1, color = Substrate, fi
                      labels = c("1/7","1/5","1/3","1/2","1/1")) +
   labs(y="Number of Common ASVs", x="Disturbance Frequency (1/n days)") + 
   ggtitle("Hill 1 Diversity \n Exponential of Shannon's Entropy")
-pHill1
+#pHill1
 
 
 p_stats <- ggtexttable(tab_total2, rows = NULL,
-                            theme = ttheme("blank"))
-p_stats <- tab_add_title(p_stats, "Comparison of Hill 1 means of \n selected frequency treatments", size = 20)
+                            theme = ttheme("blank",  base_size = 6.5)) 
+
+p_stats <- tab_add_title(p_stats, "Comparison of Hill 1 means of \n selected frequency treatments", size = 12)
 
 p_stats2 <- ggtexttable(tab3, rows = NULL,
-                       theme = ttheme("blank"))
-p_stats2 <- tab_add_title(p_stats2, "Comparison of Hill 1 means \n between substrate treatments", size = 20)
+                       theme = ttheme("blank",  base_size = 6.5)) +
+  theme(plot.margin=grid::unit(c(0,0,0,0), "mm"))
+p_stats2 <- tab_add_title(p_stats2, "Comparison of Hill 1 means \n between substrate treatments", size = 12)
 
 
 p1 <- pHill1 
@@ -152,14 +155,14 @@ p2 <- p_stats
 p3 <- p_stats2
 
 fig4 <- ggdraw () +
-  draw_plot(p1, x = 0, y = 0, width = .58, height = 1) +
-  draw_plot(p2, x = 0.65, y = 0.24, width = .3, height = 1) +
+  draw_plot(p1, x = 0, y = 0, width = .55, height = 1) +
+  draw_plot(p2, x = 0.65, y = 0.235, width = .3, height = 1,) +
   draw_plot(p3, x = 0.65, y = -.25, width = .3, height = 1) +
-  draw_plot_label(label = c("A", "B", "C"), size = 25,
+  draw_plot_label(label = c("A", "B", "C"), size = 15,
                   x = c(0, 0.556, 0.56), y = c(1, 1, 0.44))
 #fig4
 
-ggsave("Figure_4_hill1.tiff", width = 10.5, height = 6.7, units = "in", device = "tiff", dpi = 300)
+ggsave("Figure_4_hill1.tiff", width = 6.875, height = 4.8, units = "in", device = "tiff", dpi = 300)
 #ggsave("Figure_hill1.png", device = "png", dpi = 300)
 #ggsave("Figure_hill1.pdf", device = "pdf", dpi = 300)
 
