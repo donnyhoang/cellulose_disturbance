@@ -140,14 +140,12 @@ pHill1 <-ggplot(hill_total, aes(x = Frequency2, y = Hill1, color = Substrate, fi
 
 
 p_stats <- ggtexttable(tab_total2, rows = NULL,
-                            theme = ttheme("blank",  base_size = 7.5,
-                                           padding = unit(c(1.5,3), "mm"))) 
+                            theme = ttheme("blank",  base_size = 6.5)) 
 
 p_stats <- tab_add_title(p_stats, "Comparison of Hill 1 means of \n selected frequency treatments", size = 12)
 
 p_stats2 <- ggtexttable(tab3, rows = NULL,
-                       theme = ttheme("blank",  base_size = 7.5,
-                                      padding = unit(c(1.5,3), "mm"))) +
+                       theme = ttheme("blank",  base_size = 6.5)) +
   theme(plot.margin=grid::unit(c(0,0,0,0), "mm"))
 p_stats2 <- tab_add_title(p_stats2, "Comparison of Hill 1 means \n between substrate treatments", size = 12)
 
@@ -158,8 +156,8 @@ p3 <- p_stats2
 
 fig4 <- ggdraw () +
   draw_plot(p1, x = 0, y = 0, width = .55, height = 1) +
-  draw_plot(p2, x = 0.65, y = 0.245, width = .3, height = 1,) +
-  draw_plot(p3, x = 0.65, y = -.245, width = .3, height = 1) +
+  draw_plot(p2, x = 0.65, y = 0.235, width = .3, height = 1,) +
+  draw_plot(p3, x = 0.65, y = -.25, width = .3, height = 1) +
   draw_plot_label(label = c("A", "B", "C"), size = 15,
                   x = c(0, 0.556, 0.56), y = c(1, 1, 0.44))
 #fig4
