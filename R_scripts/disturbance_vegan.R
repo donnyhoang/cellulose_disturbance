@@ -243,6 +243,7 @@ phill
 
 ## regression
 ## Star with H1 cause that's probably the best to compare
+
 hill_total$Frequency2 <- as.numeric(hill_total$Frequency2)
 pHill1_lin <-ggplot(hill_total, aes(x = Frequency2, y = Hill1, color = Substrate)) +
   geom_point() +
@@ -279,17 +280,17 @@ pHill1_poly <- ggplot(hill_total, aes(x = Frequency2, y = Hill1, color = Substra
                      labels = c("1/7","1/5","1/3","1/2","1/1")) +
   labs(y="Number of common ASVs", x="Disturbance Frequency (1/n days)") + 
   ggtitle("Hill 1, Quadratic Regression")
-pHill1_poly
+#pHill1_poly
 
 preg <- ggarrange(pHill1_lin, pHill1_poly, common.legend = TRUE, legend = "right", labels = "AUTO", font.label=list(size = 20) )
-
+preg
 
 
 x <- c(1/1, 1/2, 1/3, 1/5, 1/7)
-c_lin <- 4.31-(1.26*x)
+c_lin <- 4.31 -(1.26*x)
 g_lin <- 1.51 + (1.89*x)
-c_quad <- 3.8 - (4.68*x) - (4.57 * (x^2))
-g_quad <- 2.25 + (6.54*x) - (1.26 * (x^2))
+c_quad <- 3.8 - (4.68*x) - (5.57 * (x^2))
+g_quad <- 2.25 + (6.54*x) + (1.26 * (x^2))
 
 predicted <- data.frame(x, c_lin, g_lin, c_quad, g_quad)
 predicted <- melt(predicted, id = c("x"))
